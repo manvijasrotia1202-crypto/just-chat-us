@@ -15,6 +15,9 @@ const PORT = Number(process.env.PORT) || 3000;
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000; // fallback: room expires after 12 hours
 const DISCONNECT_GRACE_MS = 15_000; // wait briefly for accidental reconnects
 const MAX_MESSAGES = 100;
+// Set these two values in Render Environment to keep one reusable room.
+const FIXED_ROOM_ID = process.env.FIXED_ROOM_ID || "";
+const FIXED_ROOM_TOKEN = process.env.FIXED_ROOM_TOKEN || "";
 const MAX_TEXT_LENGTH = 2_000;
 const MAX_PHOTO_BYTES = 1 * 1024 * 1024; // 1 MiB per photo
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -79,11 +82,10 @@ function scheduleEmptyRoomCleanup(roomId) {
   room.cleanupTimer.unref?.();
 }
 
-function makeRoom() {
-  const roomId = randomToken(9);
+function makeRoom(roomId = randomToken(9), joinCode = randomToken(24)) {
   const room = {
     id: roomId,
-    joinCode: randomToken(24),
+    joinCode,
     createdAt: Date.now(),
     expiresAt: Date.now() + ROOM_TTL_MS,
     members: new Map(),
@@ -129,7 +131,22 @@ io.on("connection", (socket) => {
     if (!name) return reply({ ok: false, error: "Enter a display name first." });
     if (socketRooms.has(socket.id)) return reply({ ok: false, error: "You're already in a room." });
 
-    const room = makeRoom();
+    let room;
+    if (FIXED_ROOM_ID && FIXED_ROOM_TOKEN) {
+      room = rooms.get(FIXED_ROOM_ID);
+      if (room && roomIsExpired(room)) {
+        clearRoom(FIXED_ROOM_ID, "This room expired and its contents were erased.");
+        room = null;
+      }
+      if (!room) room = makeRoom(FIXED_ROOM_ID, FIXED_ROOM_TOKEN);
+      if (room.members.size >= 2) return reply({ ok: false, error: "This room already has two people." });
+      if (room.cleanupTimer) {
+        clearTimeout(room.cleanupTimer);
+        room.cleanupTimer = null;
+      }
+    } else {
+      room = makeRoom();
+    }
     room.members.set(socket.id, { name, joinedAt: Date.now() });
     socketRooms.set(socket.id, room.id);
     socket.join(room.id);
@@ -153,10 +170,19 @@ io.on("connection", (socket) => {
     if (!name) return reply({ ok: false, error: "Enter a display name first." });
     if (socketRooms.has(socket.id)) return reply({ ok: false, error: "You're already in a room." });
 
-    const room = rooms.get(roomId);
-    if (!room || roomIsExpired(room)) {
-      if (room) clearRoom(roomId, "This room expired and its contents were erased.");
-      return reply({ ok: false, error: "That room doesn't exist anymore. Ask your friend to create a new one." });
+    let room = rooms.get(roomId);
+    if (room && roomIsExpired(room)) {
+      clearRoom(roomId, "This room expired and its contents were erased.");
+      room = null;
+    }
+    // Re-create the same empty room after its temporary contents are erased or
+    // the free hosting instance restarts. The fixed invitation remains valid.
+    if (!room && FIXED_ROOM_ID && FIXED_ROOM_TOKEN &&
+        roomId === FIXED_ROOM_ID && safeEqual(inviteToken, FIXED_ROOM_TOKEN)) {
+      room = makeRoom(FIXED_ROOM_ID, FIXED_ROOM_TOKEN);
+    }
+    if (!room) {
+      return reply({ ok: false, error: "That room doesn't exist anymore. Check your permanent invitation link." });
     }
     if (!safeEqual(inviteToken, room.joinCode)) {
       return reply({ ok: false, error: "That invitation link is invalid." });
