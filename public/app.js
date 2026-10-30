@@ -260,6 +260,17 @@
     roomStatus.textContent = "Room closed";
   }
 
+  async function getPermanentRoomKey() {
+    const storageName = "for-us-permanent-room-key-v1";
+    const saved = localStorage.getItem(storageName);
+    if (saved) {
+      return { key: await importRoomKey(saved), encoded: saved };
+    }
+    const generated = await createRoomKey();
+    localStorage.setItem(storageName, generated.encoded);
+    return generated;
+  }
+
   async function createRoom() {
     clearError();
     myName = nameInput.value.trim();
@@ -267,7 +278,7 @@
     if (!window.crypto?.subtle) return showError("Secure browser encryption isn't available. Open this page on HTTPS or localhost.");
     setBusy(createButton, true);
     try {
-      const generated = await createRoomKey();
+      const generated = await getPermanentRoomKey();
       socket.emit("room:create", { name: myName }, (result) => {
         setBusy(createButton, false);
         if (!result?.ok) return showError(result?.error || "Couldn't create the room.");
@@ -285,9 +296,10 @@
         inviteBox.hidden = false;
         roomStatus.innerHTML = '<span class="status-dot"></span> Waiting for your person';
         showChat();
-        // The fragment stays in the invitation input, but not in the active page URL.
-        history.replaceState({}, "", url.pathname + url.search);
-        notify("Encrypted room created. Send the full invitation link.");
+        // Keep the full link (including its local-only encryption key fragment)
+        // in the address bar so it can be bookmarked and reused.
+        history.replaceState({}, "", url.toString());
+        notify("Your permanent room link is ready. Bookmark it and share it once.");
       });
     } catch {
       setBusy(createButton, false);
@@ -323,7 +335,7 @@
         updateEmptyState();
         roomStatus.innerHTML = '<span class="status-dot"></span> Connected to your person';
         showChat();
-        history.replaceState({}, "", window.location.pathname);
+        // Keep the invitation URL in the address bar so this device can bookmark it.
       });
     } catch {
       setBusy(joinButton, false);
