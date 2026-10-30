@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#f7f7f5">
+  <meta name="description" content="A temporary two-person chat room. No saved chat history.">
+  <title>just us. | Temporary chat</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Just Us home"><span class="brand-mark">✳</span> just us.</a>
+      <span class="privacy-pill"><span class="status-dot"></span> RAM-only room</span>
+    </header>
+
+    <section id="entry-screen" class="entry-screen">
+      <div class="intro">
+        <div class="eyebrow">A LITTLE ROOM FOR TWO</div>
+        <h1>Say it here.<br><span>Leave it here.</span></h1>
+        <p class="intro-copy">A small private chat for two people. Messages are encrypted in your browser before the server relays them.</p>
+      </div>
+
+      <div class="entry-card">
+        <label for="display-name">Your display name</label>
+        <input id="display-name" maxlength="32" autocomplete="nickname" placeholder="What should your friend call you?">
+        <div id="entry-error" class="error" role="alert" hidden></div>
+
+        <div id="create-panel">
+          <button id="create-room" class="button button-primary">Create a room <span>↗</span></button>
+          <p class="fine-print">You'll get a private invitation link to send to one friend.</p>
+        </div>
+
+        <div id="join-panel" hidden>
+          <div class="invite-found"><span class="status-dot"></span> You've got an invitation</div>
+          <button id="join-room" class="button button-primary">Join the room <span>↗</span></button>
+          <p class="fine-print">Only join links from someone you trust.</p>
+        </div>
+      </div>
+
+      <div class="three-notes">
+        <div><span class="note-icon">⌁</span><strong>Live messages</strong><small>No refresh needed</small></div>
+        <div><span class="note-icon">↗</span><strong>Reply + photos</strong><small>Keep the context</small></div>
+        <div><span class="note-icon">◌</span><strong>End-to-end encrypted</strong><small>Server can't read content</small></div>
+      </div>
+      <p class="footnote">Temporary doesn't mean screenshot-proof. Your friend can still save what they see.</p>
+    </section>
+
+    <section id="chat-screen" class="chat-screen" hidden>
+      <div class="room-heading">
+        <div>
+          <div class="eyebrow">YOUR PRIVATE ROOM</div>
+          <h1>just us<span class="period">.</span></h1>
+          <p id="room-status" class="room-status"><span class="status-dot"></span> Waiting for your person</p>
+        </div>
+        <button id="leave-room" class="button button-quiet">Leave room</button>
+      </div>
+
+      <div id="invite-box" class="invite-box" hidden>
+        <div class="invite-copy">
+          <strong>Your room is ready.</strong>
+          <span>Send this link to your one person.</span>
+        </div>
+        <div class="invite-row">
+          <input id="invite-link" readonly aria-label="Invitation link">
+          <button id="copy-link" class="button button-dark">Copy link</button>
+        </div>
+        <p class="fine-print">Keep the invitation private. Anyone with it may be able to join before the room fills.</p>
+      </div>
+
+      <div class="chat-panel">
+        <div id="messages" class="messages" aria-live="polite" aria-label="Chat messages">
+          <div id="empty-state" class="empty-state">
+            <div class="empty-symbol">✳</div>
+            <strong>The room is yours.</strong>
+            <span>Send the first message when you're ready.</span>
+          </div>
+        </div>
+        <div id="reply-preview" class="reply-preview" hidden>
+          <div><small>REPLYING TO</small><strong id="reply-name"></strong><span id="reply-text"></span></div>
+          <button id="cancel-reply" aria-label="Cancel reply">×</button>
+        </div>
+        <div class="composer">
+          <label class="photo-button" for="photo-input" title="Attach a photo" aria-label="Attach a photo">＋</label>
+          <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+          <textarea id="message-input" rows="1" maxlength="2000" placeholder="Write something..." aria-label="Message"></textarea>
+          <button id="send-button" class="send-button" aria-label="Send message">↑</button>
+        </div>
+        <div id="photo-preview" class="photo-preview" hidden>
+          <img id="preview-image" alt="Selected photo preview">
+          <div><strong id="preview-name">Photo ready</strong><small>Temporary upload · max 1 MiB</small></div>
+          <button id="remove-photo" aria-label="Remove selected photo">×</button>
+        </div>
+        <div class="composer-foot"><span>Enter to send · Shift + Enter for a new line</span><span>Max 2,000 characters</span></div>
+      </div>
+      <p class="footnote">Room contents clear after both people disconnect, or when the room expires. This app cannot stop screenshots or copies.</p>
+    </section>
+
+    <footer class="site-footer"><span>just us. <span id="year"></span></span><span>Small room. Short memory.</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
